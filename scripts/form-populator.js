@@ -87,16 +87,37 @@
   }
 
   function waitAndPopulate() {
-    var params = new URLSearchParams(window.location.search);
     var data = {};
+    var source = '';
 
-    params.forEach(function (value, key) {
-      data[key] = value;
-    });
+    // Fonte 1: localStorage com TTL (V3 — dados nunca expostos no URL)
+    var stored = localStorage.getItem('aderirOnlineFormData');
+    if (stored) {
+      try {
+        var entry = JSON.parse(stored);
+        localStorage.removeItem('aderirOnlineFormData');
+        if (entry && entry.data && entry.expires && Date.now() < entry.expires) {
+          var hasData = Object.values(entry.data).some(function(v) { return v !== ''; });
+          if (hasData) {
+            data = entry.data;
+            source = 'localStorage';
+          }
+        }
+      } catch (e) {}
+    }
+
+    // Fonte 2: URL params (V2 — fallback)
+    if (Object.keys(data).length === 0) {
+      var params = new URLSearchParams(window.location.search);
+      params.forEach(function (value, key) {
+        data[key] = value;
+      });
+      if (Object.keys(data).length > 0) source = 'URL';
+    }
 
     if (Object.keys(data).length === 0) return;
 
-    console.log('%c[form-populator] dados encontrados no URL, a aguardar campos...', 'color:#00c24f;font-weight:bold', data);
+    console.log('%c[form-populator] dados encontrados em ' + source + ', a aguardar campos...', 'color:#00c24f;font-weight:bold', data);
 
     var firstKey = Object.keys(data)[0];
     var elapsed = 0;
